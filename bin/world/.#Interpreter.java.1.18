@@ -1,0 +1,211 @@
+package world;
+
+import java.util.*;
+
+/**
+ * Interpreter is the class that will handle all of the commands that are sent
+ * over the network. It will contain a HashMap that will hold String's as the
+ * key which are the commands and the actual command Object. This will make
+ * looking up the commands run in constant time. It will also store the global
+ * lock for any active mob threads.
+ * 
+ * @author Matt Turner, Ross Bottorf, Zach Boe, Jonathan Perrine
+ * 
+ */
+public class Interpreter {
+
+	private static Set<String> commandList;
+	private static Thread saveThread;
+	private static boolean threadsLocked;
+	private static Object threadLock;
+	private static Interpreter INSTANCE = new Interpreter();
+
+	private Interpreter() {
+		commandList = new TreeSet<String>();
+		commandList.add("look");
+		commandList.add("north");
+		commandList.add("south");
+		commandList.add("east");
+		commandList.add("west");
+		commandList.add("ooc");
+		commandList.add("who");
+		commandList.add("say");
+		commandList.add("tell");
+		commandList.add("score");
+		commandList.add("give");
+		commandList.add("get");
+		commandList.add("inventory");
+		commandList.add("drop");
+		commandList.add("use");
+		commandList.add("quit");
+		commandList.add("shutdown");
+	}
+
+	/**
+	 * processCommand will take in a player id that is the player that called
+	 * the command and a String that will hold the text that the player entered.
+	 * It will take the String and search the keys of the HashMap and if it is
+	 * found will run the command value associated with it. If not it will send
+	 * it to the room that the player is in and search its HashMap for the
+	 * command.
+	 * 
+	 * @param playerid
+	 *            ID of the player that sent the command
+	 * @param textCommand
+	 *            The string that the player entered
+	 * @return String that needs to be printed to screen
+	 */
+	public synchronized void processCommand(Player player, String textCommand) {
+		Scanner scanner = new Scanner(textCommand);
+		if (scanner.hasNext()) {
+			String command = scanner.next();
+			if (command.equals("say")) {
+				this.say(player, scanner.toString());
+			} else if(command.equals("who")) {
+				this.who(player);
+			} else if(command.equals("tell")) {
+				Player otherPlayer = World.getInstance().getPlayer(scanner.next());
+				this.tell(player, otherPlayer, scanner.nextLine());
+//			} else if(command.equals("look") && scanner.hasNext()) {
+//				look(player, World.getInstance().scanner.toString())
+			} else if(command.equals("look")) {
+				look(player);
+			} else 
+				loop: if(command.equals("north") || command.equals("east") ||
+						command.equals("south") || command.equals("west") ) {
+				List<Exit> moves= ((Room)player.getLocation()).listExits();
+				
+				for (Exit E : moves) {
+					if (E.getName().equalsIgnoreCase(command)) {
+						player.moveToRoom(E.getDestination());
+						break loop;
+					}
+					player.sendToPlayer("Exit " + command + " was not found.");
+				}
+				
+			} else {
+				player.sendToPlayer("Seriously.. wtf.. what do you think I am????? A mind reader???");
+			}
+				
+		
+		}
+	}
+
+	/**
+	 * addCommand will help to populate the HashMap of keys and values. Once the
+	 * server is started and WorldFactory is called, the addCommand will be
+	 * called upon to add the proper keys and values based on the hard coded
+	 * commands in the worldFactory.
+	 * 
+	 * @param key
+	 *            Key of the command
+	 * @param cmd
+	 *            Action of the command
+	 */
+	// public void addCommand(String key) {
+	// if (!commandList.contains(key))
+	// commandList.add(key);
+	// }
+	/**
+	 * lockThreads is used when ever the world needs to be saved. This will stop
+	 * all active mob threads. This will allow us to save them so that when the
+	 * server is started back up we can load everything correctly. It will use
+	 * the static lock object.
+	 */
+	public void lockThreads() {
+
+	}
+
+	/**
+	 * threadsLocked will simple return true if the threads have been locked.
+	 * This will be contained in the boolean threadsLocked.
+	 * 
+	 * @return True if threads are locked and false otherwise.
+	 */
+	public boolean threadsLocked() {
+		return threadsLocked;
+	}
+
+	/**
+	 * unlockThreads will be called upon to take all locked mob threads and
+	 * unlock them. This will also make use of the lock object threadLock.
+	 */
+	public void unlockThreads() {
+
+	}
+
+	/**
+	 * getCommands will be called by the server.Client to receive a set of
+	 * available commands.
+	 * 
+	 * 
+	 * @return A reference to a Set of commands.
+	 */
+	public Set<String> getCommands() {
+		return commandList;
+	}
+
+	/**
+	 *getInstance() returns a static reference to this Interpreter following
+	 * the Singleton pattern. This will be used by server.Client to gain a
+	 * reference to the interpreter to which it is sending commands.
+	 * 
+	 * @return a reference to the Singleton Interpreter.
+	 */
+	public static Interpreter getInstance() {
+		return INSTANCE;
+	}
+
+	private String look(Player player) {
+
+		return ((Room) player.getLocation()).generateDescription();
+	}
+
+	private String look(Player player, DatabaseObject obj) {
+
+		world.Room loc = (Room) player.getLocation();
+
+		List<Object> contents = new ArrayList<Object>();
+
+		DatabaseObject item = null;
+
+		while (loc.getName() != "Zero") {
+			contents = new ArrayList<Object>();
+
+			contents.addAll(loc.listMovables());
+
+			contents.addAll(loc.listGear());
+			contents.addAll(loc.listExits());
+			DatabaseObject item1 = null;
+
+			if (contents.contains(obj)) {
+				item1 = (DatabaseObject) contents.get(contents.indexOf(obj));
+				return item1.toString();
+			} else
+				loc = (Room) loc.getLocation();
+
+		}
+		return "I don't see that there, so you definately can't.";
+	}
+
+	private void say(Player player, String message) {
+		((Room) player.getLocation()).sendToRoom("chat "+player.getName() + " says: " + message);
+	}
+
+	private void who(Player player) {
+		String result = "Right now, ";
+		List<Player> players = World.getInstance().getPlayers();
+		for (Player p : players) {
+			if (p.getClient() != null) {
+				result += p.getName() + " ";
+			}
+		}
+		result += "are connected.";
+		player.sendToPlayer(result);
+	}
+	
+	private void tell(Player player, Player otherPlayer, String message) {
+		otherPlayer.sendToPlayer("chat " + player.getName() + " whispers: " + message);
+		player.sendToPlayer("chat You whisper to " + otherPlayer.getName() + ": " + message);
+	}
+}
