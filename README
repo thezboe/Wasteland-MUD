@@ -5,7 +5,10 @@ In the file MudServer.java which is in the server package, take note of the
 LISTENER_PORT.  This will be the port number that the server is waiting for
 connections on.
 
-In the MUDFrame class in the view package, on the first line of the init() method, change the value in the quotes to the IP address of the machine that the you have the server running.  If you are running both programs on the same machine, put localhost in the quotes.
+In the MUDFrame class in the view package, on the first line of the init()
+method, change the value in the quotes to the IP address of the machine that 
+the you have the server running.  If you are running both programs on the 
+same machine, put localhost in the quotes.
 
 (EXECUTION)
 javac all java files in all packages.
