@@ -34,7 +34,7 @@ public class CombatPanel extends JPanel implements Observer {
 		this.setLayout(null);
 		this.setTextField(field);
 		worldText = new JTextArea();
-		worldText.setFont(new Font("OCR A Extended", Font.PLAIN, 16));
+		worldText.setFont(new Font("Lucida Console", Font.PLAIN, 16));
 		worldText.setEditable(false);
 		worldText.setLineWrap(true);
 		worldText.setWrapStyleWord(true);
