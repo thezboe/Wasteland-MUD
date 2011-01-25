@@ -10,6 +10,9 @@ method, change the value in the quotes to the IP address of the machine that
 the you have the server running.  If you are running both programs on the 
 same machine, put localhost in the quotes.
 
+The number after the quotes should be the same port number that was in the
+MudServer.java file.
+
 (EXECUTION)
 javac all java files in all packages.
 Run MudServer class.
